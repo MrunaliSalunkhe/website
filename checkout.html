@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout Page</title>
+    <link rel="stylesheet" href="style1.css">
+    <script src="checkout.js" defer></script>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <img src="logo.jpg" alt="Logo">
+        </div>
+        <nav>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="checkout.html" class="nav-link"> 🛒 <span id="cartCount" class="cart-count">0</span></a>
+        </nav>
+    </header>
+
+    <div class="checkout-container">
+        <h1>Your Shopping Cart</h1>
+        <div id="cartItemsContainer"></div>
+        <div id="totalAmountContainer">
+            <h2>Total: <span id="totalAmount">0.00</span></h2>
+            <button a href="index.html">Place Order</a></button>
+        </div>
+        <div id="confirmationDialog" class="hidden">
+            <p>Are you sure you want to delete this item?</p>
+            <div class="confirmation-buttons">
+                <button onclick="confirmDelete()" class="confirm-btn">Yes</button>
+                <button onclick="cancelDelete()" class="cancel-btn">No</button>
+                <script>
+                    function confirmDelete() {
+    cart = cart.filter(item => item.title !== itemToDelete);
+    updateLocalStorage(); // Update local storage
+    itemToDelete = null;
+    document.getElementById('confirmationDialog').classList.add('hidden');
+    displayCartItems();
+    updateTotalAmount();
+    updateCartCount();
+    // Update the shopping bag modal
+    updateBagContents(); // Ensure shopping bag modal reflects changes
+}
+                </script>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Page</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <img src="logo.jpg" alt="Logo">
+        </div>
+        <nav>
+            <span onclick="filterProducts('Men')" id="menBtn" class="filter-btn">Men</span>
+            <span onclick="filterProducts('Women')" id="womenBtn" class="filter-btn">Women</span>
+            <span onclick="filterProducts('Kids')" id="kidsBtn" class="filter-btn">Kids</span>
+            <span onclick="fetchProducts()" id="showAllBtn" class="filter-btn">Show All</span>
+        </nav>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search by Product Name, Title, or Vendor">
+            <i class="search-icon fas fa-search"></i>
+        </div>
+        <div class="profile-options">
+            <button class="profile-btn"><i class="fas fa-user"></i> Profile</button>
+            <button class="bag-btn" onclick="toggleShoppingBag()"><i class="fas fa-shopping-bag"></i> Your Shopping <span id="cartCount" class="cart-count"></span></button>
+        </div>
+    </header>
+    <main>
+        <div id="productsContainer"></div>
+        <div id="noResults" class="no-results">No matching products found.</div>
+    </main>
+
+    <!-- Shopping Bag Modal -->
+    <div id="shoppingBag" class="shopping-bag-modal">
+        <h2>&emsp;Your Shopping Bag</h2>
+        <div id="bagContents"></div>
+        <div id="emptyBagMessage">No products available.</div>
+        <button onclick="checkout()">Checkout</button>
+        <button onclick="toggleShoppingBag()">Close</button>
+    </div>
+
+    <script>
+        const apiUrl = 'https://cdn.shopify.com/s/files/1/0564/3685/0790/files/multiProduct.json';
+        let products = [];
+        let bag = JSON.parse(localStorage.getItem('shoppingBag')) || [];
+        let shoppingBagVisible = false;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchProducts();
+            updateBagContents();
+            updateCartCount();
+        });
+
+        function fetchProducts() {
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    products = data.categories.flatMap(category => category.category_products);
+                    displayProducts(products);
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        function displayProducts(products) {
+            const container = document.getElementById('productsContainer');
+            const noResults = document.getElementById('noResults');
+            container.innerHTML = '';
+
+            if (products.length === 0) {
+                noResults.style.display = 'block';
+            } else {
+                noResults.style.display = 'none';
+                products.forEach(product => {
+                    const productElement = document.createElement('div');
+                    productElement.className = 'product';
+                    productElement.innerHTML = `
+                        <img src="${product.image}" alt="${product.title}">
+                        <h3>${product.title}</h3>
+                        <p class="vendor-text">Vendor: ${product.vendor}</p>
+                        <p class="product-price">Price: ${product.price} <span class="product-compare-at-price">(Compare at: ${product.compare_at_price})</span></p>
+                        <p class="discount-text">${product.badge_text || ''}</p>
+                        <button class="add-to-bag-btn" onclick="addToBag('${product.title}', '${product.price}', '${product.image}')"><i class="fas fa-shopping-bag"></i> Add to Bag</button>
+                    `;
+                    container.appendChild(productElement);
+                });
+            }
+        }
+
+        function filterProducts(categoryName) {
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const category = data.categories.find(cat => cat.category_name === categoryName);
+                    displayProducts(category ? category.category_products : []);
+                    highlightButton(categoryName);
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        function highlightButton(categoryName) {
+            document.querySelectorAll('.filter-btn').forEach(button => {
+                button.classList.remove('selected');
+            });
+            const selectedButton = document.getElementById(`${categoryName.toLowerCase()}Btn`);
+            if (selectedButton) {
+                selectedButton.classList.add('selected');
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const filteredProducts = products.filter(product =>
+                product.title.toLowerCase().includes(searchTerm) ||
+                product.vendor.toLowerCase().includes(searchTerm)
+            );
+            displayProducts(filteredProducts);
+        });
+
+        function addToBag(title, price, image) {
+            const existingItem = bag.find(item => item.title === title);
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                bag.push({ title, price, image, quantity: 1 });
+            }
+
+            updateBagContents();
+            updateCartCount();
+            localStorage.setItem('shoppingBag', JSON.stringify(bag));
+            showAlert('Successfully added to your shopping bag!');
+        }
+
+        function updateBagContents() {
+            const bagContents = document.getElementById('bagContents');
+            const emptyBagMessage = document.getElementById('emptyBagMessage');
+            bagContents.innerHTML = '';
+
+            if (bag.length === 0) {
+                emptyBagMessage.style.display = 'block';
+            } else {
+                emptyBagMessage.style.display = 'none';
+                bag.forEach(item => {
+                    const itemElement = document.createElement('div');
+                    itemElement.className = 'checkout-bag-item';
+                    itemElement.innerHTML = `
+                        <img src="${item.image}" alt="${item.title}">
+                        <p>${item.title} - ${item.price}  <span onclick="removeFromBag('${item.title}')" class="delete-btn"><i class="fas fa-trash"></i> Delete</span></p>
+                    `;
+                    bagContents.appendChild(itemElement);
+                });
+            }
+        }
+
+        function removeFromBag(title) {
+            if (confirm('Are you sure you want to delete this item from your bag?')) {
+                bag = bag.filter(item => item.title !== title);
+                updateBagContents();
+                updateCartCount();
+                localStorage.setItem('shoppingBag', JSON.stringify(bag));
+            }
+        }
+
+        function showAlert(message) {
+            const alertBox = document.createElement('div');
+            alertBox.className = 'alert-box';
+            alertBox.textContent = message;
+            document.body.appendChild(alertBox);
+            setTimeout(() => {
+                alertBox.remove();
+            }, 2000);
+        }
+
+        function checkout() {
+            localStorage.setItem('checkoutBag', JSON.stringify(bag));
+            window.location.href = 'checkout.html';
+        }
+
+        function toggleShoppingBag() {
+            const shoppingBag = document.getElementById('shoppingBag');
+            shoppingBag.style.display = shoppingBagVisible ? 'none' : 'block';
+            shoppingBagVisible = !shoppingBagVisible;
+        }
+
+        function updateCartCount() {
+            const cartCount = bag.reduce((count, item) => count + item.quantity, 0);
+            document.getElementById('cartCount').textContent = cartCount;
+        }
+    </script>
+</body>
+</html>
